@@ -47,7 +47,7 @@
 <p>Lemma 1 states that if two sets of messages are meant for two different sets of nodes, we don't have to worry about the order they are received. It's used to prove lemma 3 only and is not interesting on its own.</p>
 <h4>Lemma 2</h4>
 <p>Lemma 2 states that with the possibility of a single node failure, we simply can't decide the final decided value based on the initial configuration alone. An "initial configuration" is the set of nodes and their initial value (a proposal value).</p>
-<p>The proof is quite simple: we model each initial configuration as a bit string, each bit represents a node's initial value, and order the configurations in <a href="https://en.wikipedia.org/wiki/Gray_code">Gray Code</a>. If the final decision value can be determined from the initial configuration and the algorithm satisfies the validity property, we should be able to find to consecutive rows that differ in one bit (one node's initial value) and their decision. If the mentioned node fails, the two configurations become indistinguishable and are thus bivalent (undecided).</p>
+<p>The proof is quite simple: we model each initial configuration as a bit string, each bit represents a node's initial value, and order the configurations in <a href="https://en.wikipedia.org/wiki/Gray_code">Gray Code</a>. If the final decision value can be determined from the initial configuration and the algorithm satisfies the validity property, we should be able to find two consecutive rows that differ in one bit (one node's initial value) and their decision. If the mentioned node fails, the two configurations become indistinguishable and are thus bivalent (undecided).</p>
 <p>An example decision table with 3 nodes may look like this:</p>
 <table>
 <thead><tr>
@@ -388,7 +388,7 @@ else
 </tbody>
 </table>
 <p>Every node starts by broadcasting their proposed value to all other nodes. Each node decides as soon as it sees the first message (to cope with 1 potential failure):</p>
-<pre><code>if thisnode.proposed_value + message.proposed_value &gt; 1
+<pre><code>if thisnode.proposed_value + message.proposed_value &gt;= 1
     decide 1
 else
     decide 0
