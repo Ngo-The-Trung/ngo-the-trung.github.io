@@ -110,7 +110,7 @@
 </table>
 <p>In this case configuration <code>110</code> differ from <code>111</code> by 1 bit (node 0) and their decisions also differ. If node 0 fails, there's no way to tell which value the algorithm will arrive at anymore.</p>
 <h4>Lemma 3</h4>
-<p>Lemma 3 states: if a configuration is bivalent (undecided), there's always a possibilty that it remains bivalent when a certain event <code>e</code> is delayed.</p>
+<p>Lemma 3 states: if a configuration is bivalent (undecided), there's always a possibility that it remains bivalent when a certain event <code>e</code> is delayed.</p>
 <p>The intuition here is that there has to be a pair of "important" messages, in this case carried by <code>e</code> and <code>e'</code> which changes a configuration from bivalent (undecided) to univalent (decided).</p>
 <p>We start with a message carried by event <code>e</code>. We delay <code>e</code> arbitrarily, but because the algorithm has to be valid even when <code>e</code> is delayed we come up with another message <code>e'</code> which is responsible for satisfying the validity property (by moving one configuration from 0 to 1 or from 1 to 0).</p>
 <p>Case 1 shows us that these 2 events must target the same process/node, because otherwise (that they target different nodes) the different nodes will decide on different values and fail the agreement property.</p>
