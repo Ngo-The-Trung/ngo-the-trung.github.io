@@ -1,0 +1,58 @@
+body {
+    margin: 40px auto;
+    max-width: 650px;
+    line-height: 1.6;
+    font-size: 20px;
+    padding: 0 10px;
+
+    background-repeat: repeat;
+}
+
+h1, h2, h3 {
+    line-height: 1.2;
+}
+
+nav a {
+    margin-right: 5px;
+}
+
+a {
+    color: #333333;
+    font-style: italic;
+}
+
+code {
+    font-size: initial;
+    font-weight: bolder;
+}
+
+p {
+    text-align: justify;
+}
+
+.blog-title {
+    text-decoration: initial;
+    font-style: initial;
+}
+
+.blog-post-title {
+    margin-bottom: 0;
+}
+
+.blog-post-title a {
+    text-decoration: initial;
+    font-style: initial;
+    text-align: right;
+}
+
+.blog-post-meta {
+    text-align: right;
+}
+
+.blog-post {
+    font-size: medium;
+}
+
+footer {
+    margin-top: 50px;
+}

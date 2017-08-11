@@ -1,0 +1,408 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../static/style.css">
+<title>The FLP-impossibility — blog</title>
+<body>
+  <header>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/blog">Blog</a>
+    </nav>
+  </header>
+  <div class="page">
+    
+  
+  <div class="blog-post">
+  <h3 class="blog-post-title">
+    [2017-08-10]
+    <a href="../../blog/flp/">The FLP-impossibility</a>
+  </h3>
+  <div class="blog-post-meta">
+  </div>
+  <h3>I. Introduction</h3>
+<p><a href="https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf">Impossibility of Distributed Consensus with One Faulty Process</a> is one of the classical papers in distributed systems research. The paper gives a rigorous proof to the inexistence of an algorithm that can solve the consensus problem "reliably" (without resorting to randomness, timeout and retry) in the presence of an unreliable network and the possibility that nodes may fail.</p>
+<p>This proof in the paper is surprisingly short (3-4 pages) but, personally, did not feel intuitive. In this post I will attempt to append a few personal interpretations on top of the existing lemmas in the paper to derive a more intuitive explanation to the problem. Readers are advised to read the paper beforehand (as mentioned, it's a quick read).</p>
+<h3>II. Motivation</h3>
+<p>This section could be skipped if you've read the paper.</p>
+<p>The consensus problem in distributed systems is defined like this: you have a set of nodes/nodes (these are are servers in your infrastructure, connected to each other via a network). They each start with an initial value (for simplicity, this value is a single bit: 0 or 1) and they try to agree on <em>some</em> value. A consensus protocol must satisfy a few properties:</p>
+<ul>
+<li>Termination: all correct nodes decide on some value</li>
+<li>Agreement: all correct nodes decide on the same value</li>
+<li>Validity: the decided upon value must have been proposed by some node initially</li>
+</ul>
+<p>Note: when a node <em>decides</em> on a value, the decision is final (it can't "decide" on a different value later).</p>
+<p>The paper actually <em>relaxes</em> said constraints a bit in its definition of an "totally correct in spite of one failure" algorithm:</p>
+<ul>
+<li>Termination: at least one non-faulty node decides on some value ("deciding run" in the paper)</li>
+<li>Validity: the algorithm decides 0 in some scenarios and 1 in some other scenarios ("partially correct", second condition in the paper)</li>
+</ul>
+<p>The weaker validity property might not be intuitive: an algorithm that satisfies this weaker constraint might have nodes decide on 0 when all nodes start with/propose 1, which might not make sense since you would expect an algorithm to decide on, a value proposed by a majority of nodes. This requirement is still strong enough rule out trivial algorithms (i.e. always decides on 0, or always decides on 1) which satisfies the Termination and Agreement properties, but is not at all useful.</p>
+<p>The paper attempts to prove the impossibility in with a weak set of constraints, in turns also proving that it's also impossible in a stricter system. In a similar fashion, the asynchronous is also relaxed:</p>
+<p>Asynchronous: distributed systems can be modeled as synchronous or asynchronous. Their difference lies <em>primarily</em> in the guarantees about message delivery, in an asynchronous networks your messages can be reordered, lost, delayed (arbitrarily) and even duplicated. Again, The paper uses fewer constraints with the term "asynchronous": messages can be reordered (i.e. delayed for some time, but not indefinitely long), messages are not lost (they are always eventually delivered) and not duplicated.</p>
+<p>The paper's goal is to prove that there's no algorithm that "reliably" solves the consensus problem in an asynchronous system when a single node can fail. The point</p>
+<p>"Reliably" here means it has to satisfy the three above properties: Termination, Agreement and Validity. Note that in practice, it's fine for an algorithm to fail to reach agreement - it simply means it has to timeout and retry (for example: Raft retries during the election period if it cannot elect a Leader node). The issue with retrying is that it adds an undesirable degree of uncertainty to your algorithm. The paper attempts to find the answer to the question: "Is it possible to create a consensus algorithm that doesn't have to resort to retrying?", in which case the answer is "No, if messages can be delayed arbitrarily and as many as one node fails".</p>
+<h3>III. The three lemmas</h3>
+<p>The proof uses three lemmas to prove it.</p>
+<h4>Lemma 1</h4>
+<p>Lemma 1 states that if two sets of messages are meant for two different sets of nodes, we don't have to worry about the order they are received. It's used to prove lemma 3 only and is not interesting on its own.</p>
+<h4>Lemma 2</h4>
+<p>Lemma 2 states that with the possibility of a single node failure, we simply can't decide the final decided value based on the initial configuration alone. An "initial configuration" is the set of nodes and their initial value (a proposal value).</p>
+<p>The proof is quite simple: we model each initial configuration as a bit string, each bit represents a node's initial value, and order the configurations in <a href="https://en.wikipedia.org/wiki/Gray_code">Gray Code</a>. If the final decision value can be determined from the initial configuration and the algorithm satisfies the validity property, we should be able to find to consecutive rows that differ in one bit (one node's initial value) and their decision. If the mentioned node fails, the two configurations become indistinguishable and are thus bivalent (undecided).</p>
+<p>An example decision table with 3 nodes may look like this:</p>
+<table>
+<thead><tr>
+<th style="text-align:center">Node 2</th>
+<th style="text-align:center">Node 1</th>
+<th style="text-align:center">Node 0</th>
+<th style="text-align:center">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+</tbody>
+</table>
+<p>In this case configuration <code>110</code> differ from <code>111</code> by 1 bit (node 0) and their decisions also differ. If node 0 fails, there's no way to tell which value the algorithm will arrive at anymore.</p>
+<h4>Lemma 3</h4>
+<p>Lemma 3 states: if a configuration is bivalent (undecided), there's always a possibilty that it remains bivalent when a certain event <code>e</code> is delayed.</p>
+<p>The intuition here is that there has to be a pair of "important" messages, in this case carried by <code>e</code> and <code>e'</code> which changes a configuration from bivalent (undecided) to univalent (decided).</p>
+<p>We start with a message carried by event <code>e</code>. We delay <code>e</code> arbitrarily, but because the algorithm has to be valid even when <code>e</code> is delayed we come up with another message <code>e'</code> which is responsible for satisfying the validity property (by moving one configuration from 0 to 1 or from 1 to 0).</p>
+<p>Case 1 shows us that these 2 events must target the same process/node, because otherwise (that they target different nodes) the different nodes will decide on different values and fail the agreement property.</p>
+<p>Case 2 highlights a difficulty a consensus algorithm will encounter: it cannot differentiate between a failed node and a delayed message. Here configuration A is arrived at without relying on <code>e</code> and <code>e'</code> (since they are meant for node p, which <em>may</em> fail). In scenarios where p is actually not failing, it's making an independent decision from the rest of the nodes, which can differ and fail the agreement property.</p>
+<p>Having an algorithm rely on certain "important" messages risk that it fails to terminate when the sender encounters a failure. Having it proceed without considering those messages risk failing to reach agreement.</p>
+<h3>IV. Thought experiments</h3>
+<p>The proof shows the impossibility of a totally correct algorithm when both constraints are applied:</p>
+<ul>
+<li><p>Messages can be delayed</p>
+</li>
+<li><p>Up to one node can fail</p>
+</li>
+</ul>
+<p>What happens when we relax either condition just a little bit?</p>
+<h4>Relaxing the node failure condition</h4>
+<p>Let's just use a simple setup for the purpose of demonstration. Assume that we have 3 nodes numbering 0, 1 and 2. Assume that 0 is the only node that <em>may</em> fail.</p>
+<p>The algorithm simply has to match the initial configurations with the decision values. Again we sort them using Gray code, then we attempt to satisfy the weak validity property by marking some configurations as decide-0 and some as decide-1. We can satisfy our weaker failure constraint by ensuring that configurations that only differ in the 0th bit decide on the same values.</p>
+<table>
+<thead><tr>
+<th style="text-align:center">Node 2</th>
+<th style="text-align:center">Node 1</th>
+<th style="text-align:center">Node 0</th>
+<th style="text-align:center">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+</tbody>
+</table>
+<p>Each node broadcasts its initial value to other nodes. The receiver then store a mapping of (sender, proposed_value) and decides like this when it has received a message from both node 1 and 2:</p>
+<pre><code>if node2.proposed_value == node1.proposed_value == 1
+    decide 1
+else
+    decide 0
+</code></pre>
+<p>Since each node only waits for the proposals of node 2 and 1 (which cannot fail), the algorithm doesn't suffer from the mentioned "failure/delayed confusion" and always terminates. Since it doesn't use node 0's proposed value, it's also guaranteed to reach agreement in both cases: 0 is functional/0 is failing.</p>
+<p>What's happening here? Our relaxed node failure property has freed the algorithm from lemma 2 (which states that we can't tell the decision value from the initial configurations alone).</p>
+<p>We slightly increases the strictness, allowing up to 1 node to fail, as long as that node is 0 or 1. Now in our new table, we have to ensure that the initial configurations that only differ by node 1 decide on the same value too:</p>
+<table>
+<thead><tr>
+<th style="text-align:center">Node 2</th>
+<th style="text-align:center">Node 1</th>
+<th style="text-align:center">Node 0</th>
+<th style="text-align:center">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+</tbody>
+</table>
+<p>Configuration <code>101</code> which differs <code>111</code> at node 1 has to have the same value. The same applies to <code>100</code> and <code>110</code>. Here I set them all to 1 (0 is also applicable).</p>
+<p>Our decision code is now as such:</p>
+<pre><code>if node2.proposed_value == 1
+    decide 1
+else
+    decide 0
+</code></pre>
+<p>And we trigger this decision as soon as a node learns of node 2's proposal. Again, this satisfies the termination condition since we know node 2 cannot fail.</p>
+<p>We've simply disregarded node 1's proposed value too, on top of node 0's value!</p>
+<p>If we again increases the strictness of the property to allow ANY node to fail (that is, the original failure property in the paper), we arrive at this table:</p>
+<table>
+<thead><tr>
+<th style="text-align:center">Node 2</th>
+<th style="text-align:center">Node 1</th>
+<th style="text-align:center">Node 0</th>
+<th style="text-align:center">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+</tbody>
+</table>
+<p>This is the trivial algorithm that I mentioned earlier (always decide 1) - it violates the validity constraint and thus is invalid!</p>
+<h4>Relaxing the network ordering condition</h4>
+<p>If we relax the networking ordering constraint a wee bit we can assume that <code>e</code> always come after <code>e'</code> in lemma 3. By relaxing here I mean we disallow certain arrangement of messages where <code>e</code> comes before <code>e'</code> in our algorithm's assumption.</p>
+<p>Let's make up an algorithm to demonstrate this too. Start with a decision table where the agreement decision is the majority value (or 1, if there's a failure and the votes are even):</p>
+<table>
+<thead><tr>
+<th style="text-align:center">Node 2</th>
+<th style="text-align:center">Node 1</th>
+<th style="text-align:center">Node 0</th>
+<th style="text-align:center">Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">1</td>
+<td style="text-align:center">1</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">0</td>
+</tr>
+</tbody>
+</table>
+<p>Every node starts by broadcasting their proposed value to all other nodes. Each node decides as soon as it sees the first message (to cope with 1 potential failure):</p>
+<pre><code>if thisnode.proposed_value + message.proposed_value &gt; 1
+    decide 1
+else
+    decide 0
+end
+</code></pre>
+<p>This certainly will make some nodes decide on different values depending in configurations with two 1's and one 0! But if we relax the ordering constraint and enforce that "All messages to the same host proposing 1 are guaranteed to be delivered before messages proposing 0". This certainly is highly unrealistic, but it does ensure that our algorithm works properly.</p>
+<h3>Conclusion</h3>
+<p>The paper gives us an important insight on the nature of consensus protocols. It has also inspired further research into similar impossibilities (such as the one in <a href="https://www.cs.utexas.edu/~lorenzo/corsi/cs380d/papers/p225-chandra.pdf">Chandra et al</a>). The takeaway here is that in these systems the algorithms have to be able to tolerate node failures and the network reordering. Sometimes, the best decision is no decision at all.</p>
+
+  </div>
+
+
+  </div>
+  <footer>
+      &copy; Copyright 2017 by <a href="/about">Ngo The Trung</a>.
+  </footer>
+</body>
